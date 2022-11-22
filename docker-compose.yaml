@@ -1,0 +1,120 @@
+version: "3.8"
+services:
+  # WatchTower - Automatic Docker Container Updates
+  # https://github.com/containrrr/watchtower
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --label-enable --cleanup --interval 300 # check every 5 minutes
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    network_mode: none
+
+  # Docker Socket Proxy - Security Enchanced Proxy for Docker Socket
+  # https://github.com/Tecnativa/docker-socket-proxy
+  dockerproxy:
+    depends_on:
+      - watchtower
+    container_name: dockerproxy
+    image: ghcr.io/tecnativa/docker-socket-proxy:0.1.1 # this image is rather old but used to have a pinned version
+                                                       # newer version is ghcr.io/tecnativa/docker-socket-proxy:edge
+    restart: unless-stopped
+    mem_limit: 2G
+    cpus: 0.75
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro   # never expose this container to the internet!
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true" # label to enable watchtower
+    networks:
+      - docker-proxynet # use only internal network
+    environment:
+      - POST=1 # Watchtower
+      - CONTAINERS=1 # Traefik, Portainer
+      - IMAGES=1 # Portainer
+      - INFO=1 # Portainer
+      - NETWORKS=1 # Portainer
+      - SERVICES=1 # Portainer
+      - TASKS=1 # Portainer
+      - VOLUMES=1 # Portainer
+
+  # Traefik 2 - Reverse Proxy
+  traefik:
+    depends_on:
+      - dockerproxy
+      - watchtower
+    container_name: traefik
+    image: traefik:2.8 # use current version 2.8.x
+    restart: unless-stopped
+    read_only: true
+    mem_limit: 2G
+    cpus: 0.75
+    security_opt:
+      - no-new-privileges:true
+    # warning, user traefik has to be created on the host system
+    user: "2000:2000" # sudo useradd -u 2000 -M -s /usr/sbin/nologin traefik
+    volumes:
+      - ./traefik/traefik.yaml:/etc/traefik/traefik.yaml:ro    # Static Traefik Configuration
+      - ./traefik/dynamic/:/etc/traefik/dynamic/:ro            # Folder to store dynamic configuration file provider
+      - ./traefik/htpasswd:/etc/traefik/htpasswd:ro            # userfile for basic auth
+      - ./traefik/acme.json:/etc/traefik/acme.json             # certificate storage
+    command:
+      - --certificatesResolvers.tlschallenge.acme.email=${ACME_EMAIL} # set email from .env file
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true" # label to enable watchtower
+      - "traefik.enable=true"
+      # create router
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.rule=Host(`edge.${DOMAINNAME}`)"
+      - "traefik.http.routers.traefik.entrypoints=web-secure"
+      - "traefik.http.routers.traefik.tls.certresolver=tlschallenge"
+      # load middlewares; basicAuth for the dashboard and secure headers
+      - "traefik.http.routers.traefik.middlewares=basicAuth@file, secHeaders@file"
+    networks:
+      - traefik-servicenet
+      - docker-proxynet
+    ports:
+      - "80:10080"  # use high ports inside the container so
+      - "443:10443" # we don't need to be root to bind the ports
+    environment:
+      - TZ
+
+  # Portainer - Docker Manager
+  portainer:
+    depends_on:
+      - dockerproxy
+      - watchtower
+      - traefik
+    container_name: portainer
+    image: portainer/portainer-ce:2.16.2 # use latest tag
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./portainer:/data
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true" # label to enable watchtower
+      - "traefik.enable=true"
+      # create router
+      - "traefik.http.routers.portainer.service=portainer"
+      - "traefik.http.routers.portainer.rule=Host(`docker.${DOMAINNAME}`)"
+      - "traefik.http.routers.portainer.entrypoints=web-secure"
+      - "traefik.http.routers.portainer.tls.certresolver=tlschallenge"
+      # load middlewares; basicAuth for the dashboard and secure headers
+      - "traefik.http.routers.portainer.middlewares=secHeaders@file"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+    networks: # if a container needs 
+      - traefik-servicenet
+      - docker-proxynet
+    environment:
+      - TZ
+
+networks:
+  traefik-servicenet:
+    external: true           # warning, this network has to be created once before starting:
+    name: traefik-servicenet # docker network create traefik-servicenet
+  docker-proxynet:
+    driver: bridge
+    internal: true

@@ -1,0 +1,22 @@
+http:
+  middlewares:
+    basicAuth:
+      basicauth:
+        removeheader: true
+        usersfile: /etc/traefik/htpasswd
+    secHeaders:
+      headers: # set some security headers
+        referrerPolicy: no-referrer
+        forceSTSHeader: true
+        frameDeny: true
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        customRequestHeaders:
+          X-Forwarded-Proto: https
+        customResponseHeaders:
+          X-Powered-By: "Redstone"
+          Server: "Server"
+        customFrameOptionsValue: "SAMEORIGIN"

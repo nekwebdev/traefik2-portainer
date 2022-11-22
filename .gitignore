@@ -1,0 +1,7 @@
+.env
+traefik/htpasswd
+traefik/acme.json
+portainer/*
+!portainer/.gitkeep
+services/*
+!services/.gitkeep
