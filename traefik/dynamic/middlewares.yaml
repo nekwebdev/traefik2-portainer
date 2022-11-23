@@ -1,11 +1,13 @@
 http:
   middlewares:
-    basicAuth:
-      basicauth:
-        removeheader: true
-        usersfile: /etc/traefik/htpasswd
+    # prevent hammering of services
+    rateLimiter:
+      rateLimit:
+        average: 100
+        burst: 50
+    # security headers
     secHeaders:
-      headers: # set some security headers
+      headers:
         referrerPolicy: no-referrer
         forceSTSHeader: true
         frameDeny: true
@@ -20,3 +22,31 @@ http:
           X-Powered-By: "Redstone"
           Server: "Server"
         customFrameOptionsValue: "SAMEORIGIN"
+    # auth middlewares
+    basicAuth:
+      basicauth:
+        removeheader: true
+        usersfile: /etc/traefik/htpasswd
+    traefikOauth:
+      forwardAuth:
+        address: "http://oauth:4181"
+        trustForwardHeader: true
+        authResponseHeaders: "X-Forwarded-User"
+    # chain middlewares for cleaner compose files
+    chainNoAuth:
+      chain:
+        middlewares:
+          - rateLimiter
+          - secHeaders
+    chainBasicAuth:
+      chain:
+        middlewares:
+          - rateLimiter
+          - secHeaders
+          - basicAuth
+    chainOauth:
+      chain:
+        middlewares:
+          - rateLimiter
+          - secHeaders
+          - traefikOauth

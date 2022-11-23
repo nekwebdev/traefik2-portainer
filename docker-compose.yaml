@@ -59,7 +59,7 @@ services:
       - ./traefik/traefik.yaml:/etc/traefik/traefik.yaml:ro    # Static Traefik Configuration
       - ./traefik/dynamic/:/etc/traefik/dynamic/:ro            # Folder to store dynamic configuration file provider
       - ./traefik/htpasswd:/etc/traefik/htpasswd:ro            # userfile for basic auth
-      - ./traefik/acme.json:/etc/traefik/acme.json             # certificate storage
+      - ./traefik/acme.json:/etc/traefik/acme.json # warning certificate storage file must be created with 600 perms and owned by traefik user
     command:
       - --certificatesResolvers.tlschallenge.acme.email=${ACME_EMAIL} # set email from .env file
     labels:
@@ -70,8 +70,8 @@ services:
       - "traefik.http.routers.traefik.rule=Host(`edge.${DOMAINNAME}`)"
       - "traefik.http.routers.traefik.entrypoints=web-secure"
       - "traefik.http.routers.traefik.tls.certresolver=tlschallenge"
-      # load middlewares; basicAuth for the dashboard and secure headers
-      - "traefik.http.routers.traefik.middlewares=basicAuth@file, secHeaders@file"
+      # load middlewares; you can use the chainBasicAuth@file middleware chain instead of chainOauth@file
+      - "traefik.http.routers.traefik.middlewares=chainOauth@file"
     networks:
       - traefik-servicenet
       - docker-proxynet
@@ -102,14 +102,53 @@ services:
       - "traefik.http.routers.portainer.rule=Host(`docker.${DOMAINNAME}`)"
       - "traefik.http.routers.portainer.entrypoints=web-secure"
       - "traefik.http.routers.portainer.tls.certresolver=tlschallenge"
-      # load middlewares; basicAuth for the dashboard and secure headers
-      - "traefik.http.routers.portainer.middlewares=secHeaders@file"
+      # load middlewares; here we use a chain, which runs multiple middlewares.
+      - "traefik.http.routers.portainer.middlewares=chainOauth@file"
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
-    networks: # if a container needs 
+    networks:
       - traefik-servicenet
       - docker-proxynet
     environment:
       - TZ
+
+  # Google OAuth - Single Sign On using OAuth 2.0 for Traefik 2.2
+  oauth:
+    depends_on:
+      - watchtower
+      - traefik
+    container_name: oauth
+    image: thomseddon/traefik-forward-auth:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true" # label to enable watchtower
+      - "traefik.enable=true"
+      # create router
+      - "traefik.http.routers.oauth.service=oauth"
+      - "traefik.http.routers.oauth.rule=Host(`oauth.${DOMAINNAME}`)"
+      - "traefik.http.routers.oauth.entrypoints=web-secure"
+      - "traefik.http.routers.oauth.tls.certresolver=tlschallenge"
+      # load middlewares
+      - "traefik.http.routers.oauth.middlewares=chainOauth@file"
+      - "traefik.http.services.oauth.loadbalancer.server.port=4181"
+    networks:
+      - traefik-servicenet
+    environment:
+      - TZ
+      - PROVIDERS_GOOGLE_CLIENT_ID
+      - PROVIDERS_GOOGLE_CLIENT_SECRET
+      - SECRET
+      - INSECURE_COOKIE=false
+      - URL_PATH=/_oauth
+      - AUTH_HOST=oauth.${DOMAINNAME}
+      - COOKIE_DOMAIN=${DOMAINNAME}
+      - WHITELIST=${ALLOWED_EMAILS}
+      - LIFETIME=2592000 # 30 days
+      # - LOG_LEVEL=warn # [trace|debug|info|warn|error|fatal|panic] defaults to warn
+      # - LOG_FORMAT=text # [text|json|pretty] defaults to text
+      # - DEFAULT_PROVIDER=google # [google|oidc|generic-oauth] defaults to google
+      # - DEFAULT_ACTION=auth # [auth|allow] defaults to auth
 
 networks:
   traefik-servicenet:
