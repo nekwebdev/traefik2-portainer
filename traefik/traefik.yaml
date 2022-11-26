@@ -1,5 +1,7 @@
 log:
-  level: DEBUG # change to WARN once everything is setup correctly
+  # level: DEBUG # change to WARN once everything is setup correctly
+  level: WARN
+  # filePath: /logs/traefik.log
 
 accessLog:
   bufferingSize: 100
@@ -16,7 +18,7 @@ providers:
     exposedByDefault: false
     endpoint: 'tcp://dockerproxy:2375'
     network: traefik-servicenet
-    # watch: true
+    watch: true
   file:
     directory: /etc/traefik/dynamic
     watch: true
@@ -40,8 +42,8 @@ entryPoints:
 certificatesResolvers:
   tlschallenge:
     acme:
-      # comment next line AFTER testing to not be throttled by LetsEncrypt
-      caServer: https://acme-staging-v02.api.letsencrypt.org/directory
+      # comment next line out for testing to not be throttled by LetsEncrypt
+      # caServer: https://acme-staging-v02.api.letsencrypt.org/directory
       storage: /etc/traefik/acme.json
       tlsChallenge: {}
 

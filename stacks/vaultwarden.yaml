@@ -1,0 +1,43 @@
+version: "3.8"
+services:
+  # Vaultwarden - Password manager
+  vaultwarden:
+    container_name: vaultwarden
+    hostname: vaultwarden
+    image: vaultwarden/server:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ${CONFIG_HOME}/vaultwarden:/data
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true" # label to enable watchtower
+      # Traefik config
+      - "traefik.enable=true"
+      # router
+      # ui
+      - "traefik.http.services.vaultwarden-ui.loadbalancer.server.port=80"
+      - "traefik.http.routers.vaultwarden-ui.rule=Host(`${SUBDOMAIN}.${DOMAINNAME}`)"
+      - "traefik.http.routers.vaultwarden-ui.entrypoints=web-secure"
+      - "traefik.http.routers.vaultwarden-ui.tls=true"
+      - "traefik.http.routers.vaultwarden-ui.tls.certresolver=tlschallenge"
+      - "traefik.http.routers.vaultwarden-ui.middlewares=chainOauth@file"
+      - "traefik.http.routers.vaultwarden-ui.service=vaultwarden-ui"
+      # websocket
+      - "traefik.http.services.vaultwarden-websocket.loadbalancer.server.port=3012"
+      - "traefik.http.routers.vaultwarden-websocket.rule=Host(`${SUBDOMAIN}.${DOMAINNAME}`) && Path(`/notifications/hub`)"
+      - "traefik.http.routers.vaultwarden-websocket.entrypoints=web-secure"
+      - "traefik.http.routers.vaultwarden-websocket.tls=true"
+      - "traefik.http.routers.vaultwarden-websocket.tls.certresolver=tlschallenge"
+      - "traefik.http.routers.vaultwarden-websocket.service=vaultwarden-websocket"
+    networks:
+      - traefik-servicenet
+    environment:
+      - TZ
+      # After you setted up your user(s)
+      # - "SIGNUPS_ALLOWED=false"
+  
+networks:
+  ### Add to define external network to connect with Traefik
+  traefik-servicenet:
+    name: traefik-servicenet

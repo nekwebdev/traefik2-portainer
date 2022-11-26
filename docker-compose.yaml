@@ -60,6 +60,7 @@ services:
       - ./traefik/dynamic/:/etc/traefik/dynamic/:ro            # Folder to store dynamic configuration file provider
       - ./traefik/htpasswd:/etc/traefik/htpasswd:ro            # userfile for basic auth
       - ./traefik/acme.json:/etc/traefik/acme.json # warning certificate storage file must be created with 600 perms and owned by traefik user
+      # - ./logs:/logs # for host logging monitoring and fail2ban or crowdsec, make sure to create that folder and give ownership to traefik user
     command:
       - --certificatesResolvers.tlschallenge.acme.email=${ACME_EMAIL} # set email from .env file
     labels:

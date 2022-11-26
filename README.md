@@ -60,5 +60,7 @@ sudo chown traefik:traefik ./traefik/acme.json
 ```
 
 ## Post setup notes
-In traefik2 static config file `./traefik/traefik.yaml` comment out the `caServer` line in the `certificatesResolvers` once tests are done to stop using Let's Encrypt staging server. You will also want to set the log level back to `WARN` in that same file.
-***TIP:*** when using the staging server chrome base browsers will complain about SSL and rightly so, click the show advanced info button and if you have no options to ignore and proceed, just type in the browser window `thisisunsafe` and it will load your service.
+- You will need to add a docker environment to `portainer` as we did not mount the docker socket. So create a new one and use this for *Environment URL*: `dockerproxy:2375`.
+- In traefik2 static config file `./traefik/traefik.yaml` comment out the `caServer` line in the `certificatesResolvers` once tests are done to stop using Let's Encrypt staging server. You will also want to set the log level back to `WARN` in that same file.
+
+***TIP:*** when using the staging server chrome based browsers will complain about SSL and rightly so, click the show advanced info button and if you have no options to ignore and proceed, just type in the browser window `thisisunsafe` and it will load your service.

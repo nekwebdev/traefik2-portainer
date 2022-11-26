@@ -5,3 +5,4 @@ portainer/*
 !portainer/.gitkeep
 services/*
 !services/.gitkeep
+logs
