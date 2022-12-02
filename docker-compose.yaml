@@ -153,7 +153,7 @@ services:
 
 networks:
   traefik-servicenet:
-    external: true           # warning, this network has to be created once before starting:
+    external: true           # warning, this network has to be created manually before starting:
     name: traefik-servicenet # docker network create traefik-servicenet
   docker-proxynet:
     driver: bridge

@@ -21,7 +21,8 @@ services:
       - "traefik.http.routers.vaultwarden-ui.entrypoints=web-secure"
       - "traefik.http.routers.vaultwarden-ui.tls=true"
       - "traefik.http.routers.vaultwarden-ui.tls.certresolver=tlschallenge"
-      - "traefik.http.routers.vaultwarden-ui.middlewares=chainOauth@file"
+      # Oauth is problematic for iOS app, you decide if you want to use it
+      - "traefik.http.routers.vaultwarden-ui.middlewares=chainNoAuth@file"
       - "traefik.http.routers.vaultwarden-ui.service=vaultwarden-ui"
       # websocket
       - "traefik.http.services.vaultwarden-websocket.loadbalancer.server.port=3012"
@@ -34,10 +35,9 @@ services:
       - traefik-servicenet
     environment:
       - TZ
-      # After you setted up your user(s)
+      # after you set up your user(s)
       # - "SIGNUPS_ALLOWED=false"
   
 networks:
-  ### Add to define external network to connect with Traefik
   traefik-servicenet:
     name: traefik-servicenet

@@ -1,0 +1,37 @@
+version: "3.8"
+services:
+  # Nginx - Web Server
+  nginx-staging:
+    container_name: nginx-staging
+    hostname: nginx-staging
+    image: nginx:1.22.1
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    volumes:
+      - ${CONFIG_HOME}/nginx-staging/cache:/var/cache/nginx
+      - ${CONFIG_HOME}/nginx-staging/pid:/var/run
+      - /home/${DEPLOY_USER}/nginx-staging:/usr/share/nginx/html:ro
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true" # label to enable watchtower
+      # Traefik config
+      - "traefik.enable=true"
+      # router
+      # ui
+      - "traefik.http.services.nginx-staging.loadbalancer.server.port=80"
+      - "traefik.http.routers.nginx-staging.rule=Host(`${SUBDOMAIN}.${DOMAINNAME}`)"
+      - "traefik.http.routers.nginx-staging.entrypoints=web-secure"
+      - "traefik.http.routers.nginx-staging.tls=true"
+      - "traefik.http.routers.nginx-staging.tls.certresolver=tlschallenge"
+      - "traefik.http.routers.nginx-staging.middlewares=chainNoAuth@file"
+      - "traefik.http.routers.nginx-staging.service=nginx-staging"
+    networks:
+      - traefik-servicenet
+    environment:
+      - TZ
+  
+networks:
+  ### Add to define external network to connect with Traefik
+  traefik-servicenet:
+    name: traefik-servicenet

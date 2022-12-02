@@ -84,10 +84,8 @@ services:
       # - NEXTCLOUD_ADMIN_USER
       # - NEXTCLOUD_ADMIN_PASSWORD
 networks:
-  # Internal facing network for Nextcloud Docker containers
-  nextcloud:
+  nextcloud: # internal facing network for Nextcloud Docker containers
     name: nextcloud
     driver: bridge
-  ### Add to define external network to connect with Traefik
   traefik-servicenet:
     name: traefik-servicenet
