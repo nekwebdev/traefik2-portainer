@@ -13,6 +13,8 @@ services:
       - ${CONFIG_HOME}/nginx-staging/cache:/var/cache/nginx
       - ${CONFIG_HOME}/nginx-staging/pid:/var/run
       - /home/${DEPLOY_USER}/nginx-staging:/usr/share/nginx/html:ro
+      - ${CONFIG_HOME}/nginx-staging/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${CONFIG_HOME}/nginx-staging/default.conf:/etc/nginx/conf.d/default.conf:ro
     labels:
       - "com.centurylinklabs.watchtower.enable=true" # label to enable watchtower
       # Traefik config

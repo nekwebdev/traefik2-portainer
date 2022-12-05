@@ -59,6 +59,12 @@ mkdir ./services/nginx-staging/cache
 mkdir ./services/nginx-staging/pid
 ```
 
+In order to easily modify the nginx global and server config you must also create a `nginx.conf` and `default.conf` files in `.services/nginx-staging/`. You can use the provided defaults.
+```
+cp .stacks/nginx.conf.example .services/nginx-staging/nginx.conf
+cp .stacks/default.conf.example .services/nginx-staging/default.conf
+```
+
 Create a new user that will deploy the website code, use `adduser` to have a fully fledge user that can login and has a password.
 ```
 sudo groupadd -g 2002 deployuser
