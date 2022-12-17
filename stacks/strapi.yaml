@@ -1,0 +1,66 @@
+version: "3.8"
+services:
+  # MariaDB - Database
+  strapi_db:
+    container_name: strapi_db
+    hostname: strapi_db
+    image: mariadb:10.9
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ${CONFIG_HOME}/strapi_db:/var/lib/mysql
+    command: --transaction-isolation=READ-COMMITTED --log-bin=msqyld-bin --binlog-format=ROW
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true" # label to enable watchtower
+    networks:
+      - strapi-servicenet # use an internal network for the strapi services
+    environment:
+      - TZ
+      - MYSQL_ROOT_PASSWORD
+      - MYSQL_DATABASE
+      - MYSQL_USER
+      - MYSQL_PASSWORD
+  # Node server
+  strapi_node:
+    depends_on:
+      - strapi_db
+    container_name: strapi_node
+    hostname: strapi_node
+    image: nekwebdev/node:18-bullseye-slim
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    user: node
+    working_dir: /home/node/app
+    volumes:
+      - ${DEPLOY_FOLDER}:/home/node/app
+    command: sh -c "yarn && yarn start"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true" # label to enable watchtower
+      # Traefik config
+      - "traefik.enable=true"
+      # router
+      # ui
+      - "traefik.http.services.strapi_node.loadbalancer.server.port=${STRAPI_PORT}"
+      - "traefik.http.routers.strapi_node.rule=Host(`${SUBDOMAIN}.${DOMAINNAME}`)"
+      - "traefik.http.routers.strapi_node.entrypoints=web-secure"
+      - "traefik.http.routers.strapi_node.tls=true"
+      - "traefik.http.routers.strapi_node.tls.certresolver=tlschallenge"
+      - "traefik.http.routers.strapi_node.middlewares=chainNoAuth@file"
+      - "traefik.http.routers.strapi_node.service=strapi_node"
+    networks:
+      - strapi-servicenet # use an internal network for services
+      - traefik-servicenet
+    environment:
+      - TZ
+      - NODE_ENV=production
+  
+networks:
+  # Internal facing network for Nextcloud Docker containers
+  strapi-servicenet:
+    name: strapi-servicenet
+    driver: bridge
+  ### Add to define external network to connect with Traefik
+  traefik-servicenet:
+    name: traefik-servicenet

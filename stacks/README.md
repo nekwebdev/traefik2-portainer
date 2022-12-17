@@ -27,7 +27,7 @@ DATA_HOME=/home/adminuser/data
 TZ=Pacific/Tahiti
 MYSQL_ROOT_PASSWORD=jkahsdh56asd6767567sd675asd
 MYSQL_DATABASE=nextcloud
-MYSQL_USER=databseuser
+MYSQL_USER=databaseuser
 MYSQL_PASSWORD=jha78y87dhahsd878768sdh8ashd87hd
 TRUSTED_PROXIES=xxx.xxx.0.0/16
 ```
@@ -86,4 +86,35 @@ SUBDOMAIN=staging
 CONFIG_HOME=/home/adminuser/traefik2-portainer/services
 TZ=Pacific/Tahiti
 DEPLOY_USER=deployuser
+```
+
+## Node.js Strapi:
+From the root of the project:
+```shell
+mkdir ./services/strapi_db
+```
+Ensure user with id 1000 has write privileges on the `/home/deployuser/strapi-project` path.
+Might need to set bits so it sticks after push from github actions.
+Another *better* option is to build your `node` docker image with a different user id that matches your `deployuser` id. You can use mine from docker hub `nekwebdev/node:18-bullseye-slim`, then you can skip the following block of commands:
+
+```
+sudo chown -R deployuser:1000 /home/deployuser/strapi-project
+sudo chmod 775 /home/deployuser/strapi-project
+sudo find /home/deployuser/strapi-project/. -type f -exec chmod 664 {} \;
+sudo find /home/deployuser/strapi-project/. -type d -exec chmod 775 {} \;
+```
+
+Copy and paste the `strapi.yaml` file contents in a new `portainer` stack and choose `Advanced Mode` for the environment variables so you can paste what you have prepared from this template:
+
+```
+DOMAINNAME=domain.ltd
+SUBDOMAIN=strapi
+CONFIG_HOME=/home/admin/traefik2-portainer/services
+TZ=Pacific/Tahiti
+DEPLOY_FOLDER=/home/deployuser/strapi-project
+STRAPI_PORT=1337
+MYSQL_ROOT_PASSWORD=jkahsdh56asd6767567sd675asd
+MYSQL_DATABASE=strapidatabase
+MYSQL_USER=databaseuser
+MYSQL_PASSWORD=jha78y87dhahsd878768sdh8ashd87hd
 ```
